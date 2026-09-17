@@ -1,26 +1,77 @@
-:root {
-  --background: #f3f4f6;
-  --foreground: #111827;
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@import "@heroui/styles/base" layer(base);
+@import "@heroui/styles/base/scrollbar.css" layer(base);
+@import "@heroui/styles/themes/default" layer(theme);
+
+@import "@heroui/styles/components/close-button.css" layer(components);
+@import "@heroui/styles/components/description.css" layer(components);
+@import "@heroui/styles/components/field-error.css" layer(components);
+@import "@heroui/styles/components/label.css" layer(components);
+@import "@heroui/styles/components/link.css" layer(components);
+@import "@heroui/styles/components/button.css" layer(components);
+@import "@heroui/styles/components/toggle-button.css" layer(components);
+@import "@heroui/styles/components/toggle-button-group.css" layer(components);
+@import "@heroui/styles/components/list-box-item.css" layer(components);
+@import "@heroui/styles/components/list-box.css" layer(components);
+@import "@heroui/styles/components/chip.css" layer(components);
+@import "@heroui/styles/components/table.css" layer(components);
+@import "@heroui/styles/components/alert.css" layer(components);
+@import "@heroui/styles/components/spinner.css" layer(components);
+@import "@heroui/styles/components/fieldset.css" layer(components);
+@import "@heroui/styles/components/input.css" layer(components);
+@import "@heroui/styles/components/textfield.css" layer(components);
+@import "@heroui/styles/components/select.css" layer(components);
+@import "@heroui/styles/components/popover.css" layer(components);
+@import "@heroui/styles/components/surface.css" layer(components);
+@import "@heroui/styles/components/separator.css" layer(components);
+@import "@heroui/styles/components/typography.css" layer(components);
+@import "@heroui/styles/components/scroll-shadow.css" layer(components);
+
+@import "@heroui/styles/utilities";
+@import "@heroui/styles/variants";
+
+@theme {
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
 }
 
-* {
-  box-sizing: border-box;
+:root,
+.light,
+[data-theme="light"] {
+  --background: oklch(0.975 0.014 88);
+  --foreground: oklch(0.28 0.04 148);
+  --surface: oklch(0.995 0.006 92);
+  --surface-secondary: oklch(0.955 0.016 88);
+  --surface-tertiary: oklch(0.94 0.02 88);
+  --overlay: oklch(0.995 0.006 92);
+  --muted: oklch(0.5 0.03 148);
+  --accent: oklch(0.46 0.09 150);
+  --accent-foreground: oklch(0.99 0.01 92);
+  --default: oklch(0.94 0.018 88);
+  --default-foreground: oklch(0.28 0.04 148);
+  --field-background: oklch(0.995 0.006 92);
+  --field-foreground: oklch(0.28 0.04 148);
+  --field-placeholder: oklch(0.55 0.03 148);
+  --field-border: oklch(0.78 0.045 148);
+  --field-border-width: 1px;
+  --border: oklch(0.88 0.025 88);
+  --separator: oklch(0.9 0.02 88);
+  --focus: var(--accent);
+  --success: oklch(0.52 0.11 150);
+  --radius: 0.9rem;
 }
 
-html {
-  color-scheme: light;
+.typography--h1,
+.typography--h2,
+.typography--h3,
+.typography--h4 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.03em;
 }
 
-body {
-  margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
+.input {
+  min-height: 2.75rem;
 }

@@ -14,10 +14,16 @@
     "prisma:validate": "prisma validate"
   },
   "dependencies": {
+    "@heroui/react": "^3.2.5",
+    "@heroui/styles": "^3.2.5",
     "@prisma/client": "6.15.0",
+    "@tailwindcss/postcss": "^4.3.3",
     "decimal.js": "10.4.3",
     "next": "15.3.5",
+    "postcss": "^8.5.28",
     "react": "19.0.0",
+    "react-aria": "^3.52.1",
+    "react-aria-components": "^1.21.1",
     "react-dom": "19.0.0",
     "zod": "3.23.8"
   },

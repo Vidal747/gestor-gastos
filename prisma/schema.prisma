@@ -109,9 +109,15 @@ enum SettlementStatus {
   CANCELLED
 }
 
+enum OwnerRole {
+  DEBTOR
+  CREDITOR
+}
+
 model User {
   id                    String                     @id @default(cuid())
   email                 String                     @unique
+  inviteCode            String?                    @unique
   name                  String
   passwordHash          String
   role                  UserRole                   @default(USER)
@@ -123,8 +129,9 @@ model User {
   expenses              Expense[]                  @relation("ExpenseOwner")
   expensesAsPayer       Expense[]                  @relation("ExpensePayer")
   recurringExpenses     RecurringExpense[]
-  debtsAsCreditor       Debt[]                     @relation("DebtCreditor")
-  debtsAsDebtor         Debt[]                     @relation("DebtDebtor")
+  sessions              Session[]
+  ownedDebts            Debt[]                     @relation("DebtOwner")
+  counterpartyDebts     Debt[]                     @relation("DebtCounterparty")
   creditCards           CreditCard[]               @relation("CreditCardOwner")
   cardsHeld             CreditCard[]               @relation("CreditCardHolder")
   purchases             CreditCardPurchase[]
@@ -135,6 +142,8 @@ model User {
   expenseParticipants   ExpenseParticipant[]
   purchaseParticipants  PurchaseParticipant[]
   savingParticipants    SavingParticipant[]
+  connectionsLow        UserConnection[]           @relation("ConnectionLow")
+  connectionsHigh       UserConnection[]           @relation("ConnectionHigh")
 }
 
 model Account {
@@ -142,7 +151,7 @@ model Account {
   userId      String
   name        String
   type        AccountType @default(CHECKING)
-  currency    String      @default("CLP")
+  currency    String      @default("COP")
   isDefault   Boolean     @default(false)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -248,35 +257,84 @@ model RecurringExpenseParticipant {
   @@index([userId])
 }
 
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserConnection {
+  id              String   @id @default(cuid())
+  lowUserId       String
+  highUserId      String
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  lowUser         User     @relation("ConnectionLow", fields: [lowUserId], references: [id], onDelete: Cascade)
+  highUser        User     @relation("ConnectionHigh", fields: [highUserId], references: [id], onDelete: Cascade)
+
+  @@unique([lowUserId, highUserId])
+  @@index([lowUserId])
+  @@index([highUserId])
+}
+
 model Debt {
-  id               String      @id @default(cuid())
-  creditorUserId    String
-  debtorUserId     String
-  description      String
-  originalAmount   Decimal     @db.Decimal(12, 2)
-  remainingAmount  Decimal     @db.Decimal(12, 2)
-  dueDate          DateTime?
-  status           DebtStatus  @default(PENDING)
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  id                 String            @id @default(cuid())
+  ownerUserId        String
+  ownerRole          OwnerRole
+  counterpartyUserId String?
+  counterpartyName   String?
+  description        String
+  originalAmount     Decimal           @db.Decimal(12, 2)
+  remainingAmount    Decimal           @db.Decimal(12, 2)
+  status             DebtStatus        @default(PENDING)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
-  creditor         User        @relation("DebtCreditor", fields: [creditorUserId], references: [id], onDelete: Cascade)
-  debtor           User        @relation("DebtDebtor", fields: [debtorUserId], references: [id], onDelete: Cascade)
-  payments         DebtPayment[]
+  owner              User              @relation("DebtOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  counterparty       User?             @relation("DebtCounterparty", fields: [counterpartyUserId], references: [id], onDelete: SetNull)
+  installments       DebtInstallment[]
+  payments           DebtPayment[]
 
-  @@index([creditorUserId, debtorUserId])
+  @@index([ownerUserId])
+  @@index([counterpartyUserId])
+}
+
+model DebtInstallment {
+  id                String            @id @default(cuid())
+  debtId            String
+  installmentNumber Int
+  amount            Decimal           @db.Decimal(12, 2)
+  dueDate           DateTime
+  status            InstallmentStatus @default(OPEN)
+  createdAt         DateTime          @default(now())
+
+  debt              Debt              @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  payments          DebtPayment[]
+
+  @@unique([debtId, installmentNumber])
+  @@index([dueDate])
 }
 
 model DebtPayment {
-  id       String   @id @default(cuid())
-  debtId   String
-  amount   Decimal  @db.Decimal(12, 2)
-  paidAt   DateTime @default(now())
-  notes    String?
+  id            String          @id @default(cuid())
+  debtId        String
+  installmentId String
+  amount        Decimal         @db.Decimal(12, 2)
+  paidAt        DateTime        @default(now())
+  notes         String?
 
-  debt     Debt     @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  debt          Debt            @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  installment   DebtInstallment @relation(fields: [installmentId], references: [id], onDelete: Cascade)
 
   @@index([debtId, paidAt])
+  @@index([installmentId])
 }
 
 model CreditCard {
@@ -309,7 +367,6 @@ model CreditCardPurchase {
   totalAmount     Decimal                 @db.Decimal(12, 2)
   purchaseDate    DateTime
   installments    Int                     @default(1)
-  annualRate      Decimal                 @db.Decimal(8, 6)
   status          PurchaseStatus          @default(OPEN)
   notes           String?
   createdAt       DateTime                @default(now())
@@ -354,9 +411,22 @@ model PurchaseInstallment {
   createdAt           DateTime          @default(now())
 
   purchase            CreditCardPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  payments            PurchaseInstallmentPayment[]
 
   @@unique([purchaseId, installmentNumber])
   @@index([dueDate])
+}
+
+model PurchaseInstallmentPayment {
+  id            String              @id @default(cuid())
+  installmentId String
+  amount        Decimal             @db.Decimal(12, 2)
+  paidAt        DateTime            @default(now())
+  notes         String?
+
+  installment   PurchaseInstallment @relation(fields: [installmentId], references: [id], onDelete: Cascade)
+
+  @@index([installmentId, paidAt])
 }
 
 model SavingGoal {

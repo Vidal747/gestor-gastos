@@ -1,57 +1,135 @@
-const metrics = [
-  { label: 'Ingresos', value: '$1.250.000' },
-  { label: 'Gastos', value: '$780.000' },
-  { label: 'Deuda total', value: '$340.000' },
-  { label: 'Ahorro', value: '$250.000' },
-];
+import { Chip } from '@heroui/react/chip';
+import { Surface } from '@heroui/react/surface';
+import { Typography } from '@heroui/react/typography';
+import Link from 'next/link';
 
-const recentTransactions = [
-  { title: 'Salario', amount: '+ $900.000', type: 'income' },
-  { title: 'Arriendo', amount: '- $450.000', type: 'expense' },
-  { title: 'Compra tarjeta', amount: '- $160.000', type: 'expense' },
-  { title: 'Aporte ahorro', amount: '+ $30.000', type: 'income' },
-];
+import { ButtonLink } from '@/components/ButtonLink';
+import { CopyCode } from '@/components/CopyCode';
+import { listUpcoming } from '@/controllers/upcomingController';
+import { listRelationships } from '@/controllers/relationshipController';
+import { directionChipColor, formatCOP, formatDate, relationshipCopy } from '@/lib/format';
+import { formatInviteCode } from '@/lib/inviteCode';
+import { getOptionalUser } from '@/lib/currentUser';
+import { cardStore, debtStore, relationshipStore } from '@/models/stores';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const user = await getOptionalUser();
+  if (!user) {
+    return (
+      <main className="mx-auto w-full max-w-6xl px-4 py-10 pb-16">
+        <section className="mb-8 grid max-w-2xl gap-3">
+          <Typography className="uppercase tracking-[0.16em]" color="muted" type="body-xs">
+            Finanzas entre personas
+          </Typography>
+          <Typography type="h1">Saber a quién le debes, sin cédulas ni IDs raros.</Typography>
+          <Typography color="muted">
+            Cada persona tiene un código. Lo compartes, se vinculan y las deudas quedan en lenguaje claro: le debo, me
+            debe, estamos a paz.
+          </Typography>
+        </section>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Surface className="rounded-3xl p-6">
+            <Typography type="h3">Tu código es la llave</Typography>
+            <Typography className="mt-2" color="muted" type="body-sm">
+              Nadie tiene que copiar identificadores técnicos. Solo un código corto, como una clave de casa.
+            </Typography>
+          </Surface>
+          <Surface className="rounded-3xl p-6">
+            <Typography type="h3">Empieza aquí</Typography>
+            <div className="mt-4 flex flex-col gap-3">
+              <ButtonLink href="/register">Crear cuenta</ButtonLink>
+              <ButtonLink href="/login" variant="secondary">
+                Ya tengo cuenta
+              </ButtonLink>
+            </div>
+          </Surface>
+        </div>
+      </main>
+    );
+  }
+
+  const [people, upcoming] = await Promise.all([
+    listRelationships(user.id, { prisma: relationshipStore }),
+    listUpcoming(user.id, { debts: debtStore, cards: cardStore }),
+  ]);
+
   return (
-    <main style={{ padding: '2rem', maxWidth: 1100, margin: '0 auto' }}>
-      <header style={{ marginBottom: '2rem' }}>
-        <p style={{ textTransform: 'uppercase', letterSpacing: '0.12em', color: '#6b7280', fontSize: 12 }}>Dashboard</p>
-        <h1 style={{ margin: '0.5rem 0 0', fontSize: '2.2rem' }}>Estado financiero</h1>
-      </header>
-
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
-        {metrics.map((metric) => (
-          <article key={metric.label} style={{ border: '1px solid #e5e7eb', borderRadius: 16, padding: '1rem 1.25rem', background: '#fff' }}>
-            <div style={{ color: '#6b7280', fontSize: 14 }}>{metric.label}</div>
-            <div style={{ marginTop: 8, fontWeight: 700, fontSize: 24 }}>{metric.value}</div>
-          </article>
+    <main className="mx-auto w-full max-w-6xl px-4 py-10 pb-16">
+      <section className="mb-8 grid gap-2">
+        <Typography className="uppercase tracking-[0.16em]" color="muted" type="body-xs">
+          Hola, {user.name}
+        </Typography>
+        <Typography type="h1">El estado de la casa, en una mirada.</Typography>
+      </section>
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <Surface className="rounded-3xl p-6">
+          <Typography className="uppercase tracking-[0.16em]" color="muted" type="body-xs">
+            Tu código
+          </Typography>
+          <p className="mt-2 font-serif text-4xl tracking-[0.12em]">{formatInviteCode(user.inviteCode)}</p>
+          <Typography className="mt-2" color="muted" type="body-sm">
+            Compártelo para que te agreguen como relación de negocio.
+          </Typography>
+          <div className="mt-4">
+            <CopyCode code={user.inviteCode} />
+          </div>
+        </Surface>
+        <Surface className="rounded-3xl p-6">
+          <Typography className="uppercase tracking-[0.16em]" color="muted" type="body-xs">
+            Personas
+          </Typography>
+          <Typography className="mt-1" type="h3">
+            {people.length === 0 ? 'Aún no hay vínculos' : `${people.length} relaciones`}
+          </Typography>
+          <Typography className="mt-2" color="muted" type="body-sm">
+            Las deudas viven entre ustedes, no en un ID.
+          </Typography>
+          <div className="mt-4">
+            <ButtonLink href="/relaciones">Ver personas</ButtonLink>
+          </div>
+        </Surface>
+      </div>
+      <section className="mt-4 grid gap-4 md:grid-cols-2">
+        {people.slice(0, 4).map((person) => (
+          <Link key={person.peer.id} href="/relaciones">
+            <Surface className="flex items-center justify-between gap-4 rounded-3xl p-5">
+              <div>
+                <Typography type="h4">{person.peer.name}</Typography>
+                <Typography color="muted" type="body-sm">
+                  {person.peer.inviteCodeLabel}
+                </Typography>
+              </div>
+              <Chip color={directionChipColor(person.direction)} variant="soft">
+                {relationshipCopy(person.direction, person.net)}
+              </Chip>
+            </Surface>
+          </Link>
         ))}
       </section>
-
-      <section style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem', marginTop: '2rem' }}>
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: 16, background: '#fff', padding: '1.25rem' }}>
-          <h2 style={{ marginTop: 0 }}>Movimientos recientes</h2>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {recentTransactions.map((item) => (
-              <li key={item.title} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid #f3f4f6' }}>
-                <span>{item.title}</span>
-                <strong style={{ color: item.type === 'income' ? '#15803d' : '#b91c1c' }}>{item.amount}</strong>
-              </li>
-            ))}
-          </ul>
+      <section className="mt-8">
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <Typography type="h3">Lo que viene</Typography>
+          <Link className="text-sm text-muted hover:text-foreground" href="/proximos">
+            Ver calendario
+          </Link>
         </div>
-
-        <aside style={{ border: '1px solid #e5e7eb', borderRadius: 16, background: '#fff', padding: '1.25rem' }}>
-          <h2 style={{ marginTop: 0 }}>Acciones</h2>
-          <div style={{ display: 'grid', gap: '0.75rem' }}>
-            {['Registrar ingreso', 'Registrar gasto', 'Crear deuda', 'Crear ahorro', 'Pagar a persona'].map((action) => (
-              <button key={action} type="button" style={{ textAlign: 'left', padding: '0.8rem', borderRadius: 10, border: '1px solid #d1d5db', background: '#f9fafb', cursor: 'pointer' }}>
-                {action}
-              </button>
-            ))}
-          </div>
-        </aside>
+        <ul className="grid gap-3">
+          {upcoming.slice(0, 4).map((item) => (
+            <li key={item.id}>
+              <Link href={item.href}>
+                <Surface className="flex items-center justify-between gap-4 rounded-3xl p-5">
+                  <div>
+                    <Typography weight="medium">{item.title}</Typography>
+                    <Typography color="muted" type="body-sm">
+                      {formatDate(item.dueDate)}
+                    </Typography>
+                  </div>
+                  <span className="font-serif text-2xl tracking-tight">{formatCOP(item.outstanding)}</span>
+                </Surface>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
     </main>
   );

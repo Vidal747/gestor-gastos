@@ -87,7 +87,8 @@ export const getExpenseSummary = (
   validateParticipants(input.participants);
 
   try {
-    return createExpense(input, currentUserId);
+    const result = createExpense(input, currentUserId);
+    return { totalAmount: result.totalAmount, perParticipant: result.participantBreakdown };
   } catch (error) {
     if (error instanceof AppError) {
       throw error;
