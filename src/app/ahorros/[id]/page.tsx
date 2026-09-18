@@ -3,17 +3,18 @@ import { Surface } from '@heroui/react/surface';
 import { Typography } from '@heroui/react/typography';
 
 import { ContributionForm } from '@/components/ContributionForm';
+import { EditSavingForm } from '@/components/EditSavingForm';
 import { getSavingGoal } from '@/controllers/savingController';
 import { AppError } from '@/lib/errors';
 import { formatCOP, formatDate } from '@/lib/format';
-import { requireUser } from '@/lib/requireUser';
+import { requireCurrentUser } from '@/lib/requireUser';
 import { savingStore } from '@/models/stores';
 
 export default async function SavingDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const userId = await requireUser();
+  const user = await requireCurrentUser();
   const { id } = await params;
   try {
-    const saving = await getSavingGoal(id, userId, { prisma: savingStore });
+    const saving = await getSavingGoal(id, user.id, { prisma: savingStore });
     return (
       <main className="mx-auto w-full max-w-6xl px-4 py-10 pb-16">
         <section className="mb-8 grid gap-2">
@@ -61,6 +62,23 @@ export default async function SavingDetailPage({ params }: { params: Promise<{ i
             </div>
           </Surface>
         </div>
+        {saving.ownerUserId === user.id ? (
+          <Surface className="mt-4 max-w-md rounded-3xl p-6">
+            <Typography type="h4">Administrar</Typography>
+            <div className="mt-4">
+              <EditSavingForm
+                saving={{
+                  id: saving.id,
+                  name: saving.name,
+                  description: saving.description,
+                  targetAmount: saving.targetAmount.toFixed(2),
+                  targetDate: saving.targetDate ? saving.targetDate.toISOString().slice(0, 10) : null,
+                  hasContributions: saving.savedAmount.gt(0),
+                }}
+              />
+            </div>
+          </Surface>
+        ) : null}
       </main>
     );
   } catch (error) {

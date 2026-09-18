@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { addSavingContribution, createSavingGoal } from '@/controllers/savingController';
+import { addSavingContribution, createSavingGoal, deleteSavingGoal, updateSavingGoal } from '@/controllers/savingController';
 import { listRelationships } from '@/controllers/relationshipController';
 import { createValidationError } from '@/lib/errors';
 import { getCurrentUserId } from '@/lib/currentUser';
@@ -51,5 +51,35 @@ export const addSavingContributionAction = async (formData: FormData) => {
     revalidatePath('/ahorros');
     revalidatePath(`/ahorros/${updated.id}`);
     return { id: updated.id };
+  });
+};
+
+export const updateSavingAction = async (formData: FormData) => {
+  return toActionResult(async () => {
+    const currentUserId = await getCurrentUserId();
+    const savingGoalId = String(formData.get('savingGoalId') ?? '');
+    const updated = await updateSavingGoal(
+      savingGoalId,
+      {
+        name: String(formData.get('name') ?? '') || undefined,
+        description: String(formData.get('description') ?? '') || undefined,
+        targetAmount: String(formData.get('targetAmount') ?? '') || undefined,
+        targetDate: String(formData.get('targetDate') ?? '') || undefined,
+      },
+      currentUserId,
+      { prisma: savingStore },
+    );
+    revalidatePath('/ahorros');
+    revalidatePath(`/ahorros/${updated.id}`);
+    return { id: updated.id };
+  });
+};
+
+export const deleteSavingAction = async (formData: FormData) => {
+  return toActionResult(async () => {
+    const currentUserId = await getCurrentUserId();
+    await deleteSavingGoal(String(formData.get('savingGoalId') ?? ''), currentUserId, { prisma: savingStore });
+    revalidatePath('/ahorros');
+    return { id: String(formData.get('savingGoalId') ?? '') };
   });
 };

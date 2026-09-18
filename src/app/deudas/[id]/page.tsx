@@ -1,23 +1,28 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Chip } from '@heroui/react/chip';
 import { Surface } from '@heroui/react/surface';
 import { Table } from '@heroui/react/table';
 import { Typography } from '@heroui/react/typography';
 
+import { EditDebtForm } from '@/components/EditDebtForm';
 import { PayForm } from '@/components/PayForm';
 import { getDebt } from '@/controllers/debtController';
+import { listRelationships } from '@/controllers/relationshipController';
 import { AppError } from '@/lib/errors';
 import { debtStance, formatCOP, formatDate, statusChipColor, statusLabel } from '@/lib/format';
-import { requireUser } from '@/lib/requireUser';
-import { debtStore } from '@/models/stores';
+import { requireCurrentUser } from '@/lib/requireUser';
+import { debtStore, relationshipStore } from '@/models/stores';
 
 export default async function DebtDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const userId = await requireUser();
+  const user = await requireCurrentUser();
   const { id } = await params;
   try {
-    const debt = await getDebt(id, userId, { prisma: debtStore });
+    const [debt, people] = await Promise.all([
+      getDebt(id, user.id, { prisma: debtStore }),
+      listRelationships(user.id, { prisma: relationshipStore }),
+    ]);
     const current = debt.installments.find((item) => item.outstanding.gt(0));
-    const stance = debtStance(debt, userId);
+    const stance = debtStance(debt, user.id);
     return (
       <main className="mx-auto w-full max-w-6xl px-4 py-10 pb-16">
         <section className="mb-8 grid gap-2">
@@ -59,11 +64,34 @@ export default async function DebtDetailPage({ params }: { params: Promise<{ id:
             </Table.ScrollContainer>
           </Table>
         </Surface>
-        {current && debt.ownerUserId === userId ? (
+        {current && debt.ownerUserId === user.id ? (
           <Surface className="mt-4 max-w-md rounded-3xl p-6">
             <Typography type="h4">Pagar la cuota {current.installmentNumber}</Typography>
             <div className="mt-4">
               <PayForm kind="debt" id={debt.id} maxAmount={formatCOP(current.outstanding)} />
+            </div>
+          </Surface>
+        ) : null}
+        {debt.ownerUserId === user.id ? (
+          <Surface className="mt-4 max-w-md rounded-3xl p-6">
+            <Typography type="h4">Administrar</Typography>
+            <div className="mt-4">
+              <EditDebtForm
+                currentUserId={user.id}
+                debt={{
+                  id: debt.id,
+                  description: debt.description,
+                  ownerRole: debt.ownerRole,
+                  counterpartyUserId: debt.counterpartyUserId,
+                  counterpartyName: debt.counterpartyName,
+                  counterpartyLabel: debt.counterpartyLabel,
+                }}
+                people={people.map((p) => ({
+                  id: p.peer.id,
+                  name: p.peer.name,
+                  inviteCodeLabel: p.peer.inviteCodeLabel,
+                }))}
+              />
             </div>
           </Surface>
         ) : null}

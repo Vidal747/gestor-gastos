@@ -41,8 +41,9 @@ export type DebtStore = {
     findMany: (args: { where: { OR: Array<{ ownerUserId: string } | { counterpartyUserId: string }> } }) => Promise<PersistedDebt[]>;
     update: (args: {
       where: { id: string };
-      data: { remainingAmount: string; status: 'PENDING' | 'PARTIALLY_PAID' | 'PAID' };
+      data: { remainingAmount?: string; status?: 'PENDING' | 'PARTIALLY_PAID' | 'PAID'; description?: string; counterpartyUserId?: string | null; counterpartyName?: string | null; ownerRole?: 'DEBTOR' | 'CREDITOR' };
     }) => Promise<PersistedDebt>;
+    delete: (args: { where: { id: string } }) => Promise<unknown>;
   };
   debtInstallment: {
     update: (args: { where: { id: string }; data: { status: 'OPEN' | 'PAID' } }) => Promise<unknown>;
@@ -227,6 +228,72 @@ export const listDebts = async (currentUserId: string, deps: { prisma: DebtStore
     },
   });
   return rows.map(toView);
+};
+
+export type UpdateDebtInput = {
+  description?: string;
+  ownerRole?: 'DEBTOR' | 'CREDITOR';
+  counterpartyUserId?: string | null;
+  counterpartyName?: string | null;
+};
+
+export const updateDebt = async (
+  debtId: string,
+  input: UpdateDebtInput,
+  currentUserId: string,
+  deps: { prisma: DebtStore },
+): Promise<DebtView> => {
+  const debt = await loadVisibleDebt(debtId, currentUserId, deps.prisma);
+  if (debt.ownerUserId !== currentUserId) {
+    throw createNotFoundError('Debt not found.');
+  }
+
+  const view = toView(debt);
+  if (view.status === 'PAID') {
+    throw createValidationError('No se puede editar una deuda saldada.');
+  }
+
+  const data: Record<string, unknown> = {};
+  if (input.description !== undefined) {
+    if (!input.description.trim()) {
+      throw createValidationError('La descripción no puede estar vacía.');
+    }
+    data.description = input.description.trim();
+  }
+  if (input.ownerRole !== undefined) {
+    data.ownerRole = input.ownerRole;
+  }
+  if (input.counterpartyUserId !== undefined) {
+    data.counterpartyUserId = input.counterpartyUserId;
+  }
+  if (input.counterpartyName !== undefined) {
+    data.counterpartyName = input.counterpartyName?.trim() || null;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return view;
+  }
+
+  const updated = await deps.prisma.debt.update({ where: { id: debtId }, data });
+  return toView(updated);
+};
+
+export const deleteDebt = async (
+  debtId: string,
+  currentUserId: string,
+  deps: { prisma: DebtStore },
+): Promise<void> => {
+  const debt = await deps.prisma.debt.findUnique({ where: { id: debtId } });
+  if (!debt || debt.ownerUserId !== currentUserId) {
+    throw createNotFoundError('Debt not found.');
+  }
+
+  const view = toView(debt);
+  if (view.status === 'PAID' && view.installments.some((i) => i.outstanding.eq(0))) {
+    throw createValidationError('No se puede eliminar una deuda con pagos registrados.');
+  }
+
+  await deps.prisma.debt.delete({ where: { id: debtId } });
 };
 
 export const payDebtInstallment = async (

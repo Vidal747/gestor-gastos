@@ -30,7 +30,7 @@ const clone = (row: Row): Row => structuredClone(row);
 
 let fakePrisma: DebtStore;
 fakePrisma = {
-  $transaction: async (fn) => fn(fakePrisma),
+  $transaction: async (fn: (tx: DebtStore) => Promise<unknown>) => fn(fakePrisma),
   user: {
     findUnique: async ({ where: { id } }: { where: { id: string } }) =>
       id === 'user-b' ? { id: 'user-b' } : id === 'user-a' ? { id: 'user-a' } : null,
@@ -64,6 +64,7 @@ fakePrisma = {
       const row = store.get(id);
       return row ? clone(row) : null;
     },
+    findMany: async () => [],
     update: async ({ where: { id }, data }: { where: { id: string }; data: Partial<Row> }) => {
       const row = store.get(id);
       if (!row) {
@@ -71,6 +72,9 @@ fakePrisma = {
       }
       Object.assign(row, data);
       return clone(row);
+    },
+    delete: async ({ where: { id } }: { where: { id: string } }) => {
+      store.delete(id);
     },
   },
   debtInstallment: {
@@ -97,7 +101,7 @@ fakePrisma = {
       return data;
     },
   },
-} as DebtStore;
+} as unknown as DebtStore;
 
 const baseInput = {
   description: 'Préstamo',

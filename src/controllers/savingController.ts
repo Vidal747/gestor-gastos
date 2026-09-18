@@ -36,7 +36,8 @@ export type SavingStore = {
     findMany: (args: {
       where: { OR: Array<{ userId: string } | { participants: { some: { userId: string } } }> };
     }) => Promise<PersistedSaving[]>;
-    update: (args: { where: { id: string }; data: { status: 'ACTIVE' | 'COMPLETED' } }) => Promise<unknown>;
+    update: (args: { where: { id: string }; data: { status?: 'ACTIVE' | 'COMPLETED'; name?: string; description?: string | null; targetAmount?: string; targetDate?: Date | null } }) => Promise<unknown>;
+    delete: (args: { where: { id: string } }) => Promise<unknown>;
   };
   savingContribution: {
     create: (args: {
@@ -198,6 +199,57 @@ export const getSavingGoal = async (
     throw createNotFoundError('No encontramos ese ahorro.');
   }
   return toView(saving);
+};
+
+export const updateSavingGoal = async (
+  savingGoalId: string,
+  input: { name?: string; description?: string | null; targetAmount?: string; targetDate?: string | null },
+  currentUserId: string,
+  deps: { prisma: SavingStore },
+): Promise<SavingView> => {
+  const saving = await deps.prisma.savingGoal.findUnique({ where: { id: savingGoalId } });
+  if (!saving || saving.userId !== currentUserId) {
+    throw createNotFoundError('No encontramos ese ahorro.');
+  }
+
+  const data: Record<string, unknown> = {};
+  if (input.name !== undefined && input.name.trim()) {
+    data.name = input.name.trim();
+  }
+  if (input.description !== undefined) {
+    data.description = input.description?.trim() ? input.description.trim() : null;
+  }
+  if (input.targetAmount !== undefined) {
+    data.targetAmount = moneyString(input.targetAmount);
+  }
+  if (input.targetDate !== undefined) {
+    data.targetDate = parseOptionalDate(input.targetDate ?? undefined);
+  }
+
+  if (Object.keys(data).length === 0) {
+    return toView(saving);
+  }
+
+  await deps.prisma.savingGoal.update({ where: { id: savingGoalId }, data });
+  return getSavingGoal(savingGoalId, currentUserId, deps);
+};
+
+export const deleteSavingGoal = async (
+  savingGoalId: string,
+  currentUserId: string,
+  deps: { prisma: SavingStore },
+): Promise<void> => {
+  const saving = await deps.prisma.savingGoal.findUnique({ where: { id: savingGoalId } });
+  if (!saving || saving.userId !== currentUserId) {
+    throw createNotFoundError('No encontramos ese ahorro.');
+  }
+
+  const view = toView(saving);
+  if (view.savedAmount.gt(0)) {
+    throw createValidationError('No se puede eliminar un ahorro con aportes registrados.');
+  }
+
+  await deps.prisma.savingGoal.delete({ where: { id: savingGoalId } });
 };
 
 export const addSavingContribution = async (

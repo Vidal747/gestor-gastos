@@ -6,6 +6,7 @@ import { Typography } from '@heroui/react/typography';
 
 import { PurchaseForm } from '@/components/PurchaseForm';
 import { RateForm } from '@/components/RateForm';
+import { EditCardForm } from '@/components/EditCardForm';
 import { getCard } from '@/controllers/cardController';
 import { AppError } from '@/lib/errors';
 import { formatCOP, statusChipColor, statusLabel } from '@/lib/format';
@@ -72,6 +73,22 @@ export default async function CardDetailPage({ params }: { params: Promise<{ id:
         <Surface className="mt-4 rounded-3xl p-6">
           <Typography type="h3">Nueva compra</Typography>
           <PurchaseForm cardId={card.id} />
+        </Surface>
+        <Surface className="mt-4 max-w-md rounded-3xl p-6">
+          <Typography type="h4">Administrar</Typography>
+          <div className="mt-4">
+            <EditCardForm
+              card={{
+                id: card.id,
+                name: card.name,
+                bank: card.bank,
+                creditLimit: card.creditLimit.toFixed(2),
+                cutoffDay: card.cutoffDay,
+                dueDay: card.dueDay,
+                hasPurchases: card.purchases.length > 0,
+              }}
+            />
+          </div>
         </Surface>
       </main>
     );

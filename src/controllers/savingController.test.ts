@@ -76,10 +76,13 @@ fakePrisma = {
     },
     update: async ({ where, data }) => {
       const row = goals.get(where.id);
-      if (row) {
+      if (row && data.status) {
         row.status = data.status;
       }
       return row ? clone(row) : null;
+    },
+    delete: async ({ where }) => {
+      goals.delete(where.id);
     },
   },
   savingContribution: {

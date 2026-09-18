@@ -1,8 +1,10 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 
+import type { AccountStore } from '@/controllers/accountController';
 import type { AuthStore } from '@/controllers/authController';
 import type { CardStore, PersistedCard, PersistedPurchase } from '@/controllers/cardController';
 import type { DebtStore, PersistedDebt } from '@/controllers/debtController';
+import type { IncomeStore } from '@/controllers/incomeController';
 import type { RelationshipStore } from '@/controllers/relationshipController';
 import type { SavingStore } from '@/controllers/savingController';
 import { prisma } from '@/lib/db';
@@ -48,6 +50,7 @@ export const asDebtStore = (client: Client): DebtStore => ({
       client.debt.findMany({ where, include: debtInclude }) as unknown as PersistedDebt[],
     update: async ({ where, data }) =>
       client.debt.update({ where, data, include: debtInclude }) as unknown as PersistedDebt,
+    delete: async ({ where }) => client.debt.delete({ where }),
   },
   debtInstallment: {
     update: async ({ where, data }) => client.debtInstallment.update({ where, data }),
@@ -73,6 +76,7 @@ export const asCardStore = (client: Client): CardStore => ({
       client.creditCard.findMany({ where, include: cardInclude }) as unknown as PersistedCard[],
     update: async ({ where, data }) =>
       client.creditCard.update({ where, data, include: cardInclude }) as unknown as PersistedCard,
+    delete: async ({ where }) => client.creditCard.delete({ where }),
   },
   creditCardPurchase: {
     create: async ({ data }) =>
@@ -115,6 +119,7 @@ export const savingStore: SavingStore = {
     findUnique: async ({ where }) => prisma.savingGoal.findUnique({ where, include: savingInclude }),
     findMany: async ({ where }) => prisma.savingGoal.findMany({ where, include: savingInclude }),
     update: async ({ where, data }) => prisma.savingGoal.update({ where, data }),
+    delete: async ({ where }) => prisma.savingGoal.delete({ where }),
   },
   savingContribution: {
     create: async ({ data }) => prisma.savingContribution.create({ data }),
@@ -172,5 +177,30 @@ export const authStore: AuthStore = {
   },
   session: {
     create: async ({ data }) => prisma.session.create({ data }),
+  },
+};
+
+export const incomeStore: IncomeStore = {
+  income: {
+    create: async ({ data }) =>
+      prisma.income.create({ data: data as Parameters<typeof prisma.income.create>[0]['data'] }),
+    findUnique: async ({ where }) => prisma.income.findUnique({ where }),
+    findMany: async ({ where, orderBy }) =>
+      prisma.income.findMany({ where, orderBy }),
+    update: async ({ where, data }) =>
+      prisma.income.update({ where, data: data as Parameters<typeof prisma.income.update>[0]['data'] }),
+    delete: async ({ where }) => prisma.income.delete({ where }),
+  },
+};
+
+export const accountStore: AccountStore = {
+  account: {
+    create: async ({ data }) =>
+      prisma.account.create({ data: data as Parameters<typeof prisma.account.create>[0]['data'] }),
+    findUnique: async ({ where }) => prisma.account.findUnique({ where }),
+    findMany: async ({ where }) => prisma.account.findMany({ where }),
+    update: async ({ where, data }) =>
+      prisma.account.update({ where, data: data as Parameters<typeof prisma.account.update>[0]['data'] }),
+    delete: async ({ where }) => prisma.account.delete({ where }),
   },
 };

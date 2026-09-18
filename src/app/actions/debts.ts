@@ -1,10 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 import { createValidationError } from '@/lib/errors';
 import { listRelationships } from '@/controllers/relationshipController';
-import { createDebt, payDebtInstallment } from '@/controllers/debtController';
+import { createDebt, deleteDebt, payDebtInstallment, updateDebt } from '@/controllers/debtController';
 import { getCurrentUserId } from '@/lib/currentUser';
 import { toActionResult } from '@/lib/actionResult';
 import { buildMonthlyDebtSchedule, toCalendarDate, toMoney } from '@/lib/finance';
@@ -99,5 +100,39 @@ export const payDebtAction = async (formData: FormData) => {
     revalidatePath('/proximos');
     revalidatePath('/relaciones');
     return { id: paid.id };
+  });
+};
+
+export const updateDebtAction = async (formData: FormData) => {
+  return toActionResult(async () => {
+    const currentUserId = await getCurrentUserId();
+    const debtId = String(formData.get('debtId') ?? '');
+    const updated = await updateDebt(
+      debtId,
+      {
+        description: String(formData.get('description') ?? '') || undefined,
+        ownerRole: (String(formData.get('ownerRole') ?? '') || undefined) as 'DEBTOR' | 'CREDITOR' | undefined,
+        counterpartyUserId: String(formData.get('counterpartyUserId') ?? '') || undefined,
+        counterpartyName: String(formData.get('counterpartyName') ?? '') || undefined,
+      },
+      currentUserId,
+      { prisma: debtStore },
+    );
+    revalidatePath('/deudas');
+    revalidatePath(`/deudas/${updated.id}`);
+    revalidatePath('/proximos');
+    revalidatePath('/relaciones');
+    return { id: updated.id };
+  });
+};
+
+export const deleteDebtAction = async (formData: FormData) => {
+  return toActionResult(async () => {
+    const currentUserId = await getCurrentUserId();
+    await deleteDebt(String(formData.get('debtId') ?? ''), currentUserId, { prisma: debtStore });
+    revalidatePath('/deudas');
+    revalidatePath('/proximos');
+    revalidatePath('/relaciones');
+    return { id: String(formData.get('debtId') ?? '') };
   });
 };

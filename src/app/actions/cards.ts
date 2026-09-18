@@ -1,8 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
-import { createCard, createPurchase, payPurchaseInstallment, previewPurchase, updateCardRate } from '@/controllers/cardController';
+import { createCard, createPurchase, deleteCard, payPurchaseInstallment, previewPurchase, updateCard, updateCardRate } from '@/controllers/cardController';
 import { getCurrentUserId } from '@/lib/currentUser';
 import { toActionResult } from '@/lib/actionResult';
 import { cardStore } from '@/models/stores';
@@ -99,5 +100,37 @@ export const updateCardRateAction = async (formData: FormData) => {
     revalidatePath(`/tarjetas/${updated.id}`);
     revalidatePath('/proximos');
     return { id: updated.id };
+  });
+};
+
+export const updateCardAction = async (formData: FormData) => {
+  return toActionResult(async () => {
+    const currentUserId = await getCurrentUserId();
+    const updated = await updateCard(
+      String(formData.get('cardId') ?? ''),
+      {
+        name: String(formData.get('name') ?? '') || undefined,
+        bank: String(formData.get('bank') ?? '') || undefined,
+        creditLimit: String(formData.get('creditLimit') ?? '') || undefined,
+        cutoffDay: Number(formData.get('cutoffDay')) || undefined,
+        dueDay: Number(formData.get('dueDay')) || undefined,
+      },
+      currentUserId,
+      { prisma: cardStore },
+    );
+    revalidatePath('/tarjetas');
+    revalidatePath(`/tarjetas/${updated.id}`);
+    revalidatePath('/proximos');
+    return { id: updated.id };
+  });
+};
+
+export const deleteCardAction = async (formData: FormData) => {
+  return toActionResult(async () => {
+    const currentUserId = await getCurrentUserId();
+    await deleteCard(String(formData.get('cardId') ?? ''), currentUserId, { prisma: cardStore });
+    revalidatePath('/tarjetas');
+    revalidatePath('/proximos');
+    return { id: String(formData.get('cardId') ?? '') };
   });
 };

@@ -66,11 +66,15 @@ fakePrisma = {
       const card = cards.get(id);
       return card ? structuredClone(card) : null;
     },
+    findMany: async () => [],
     update: async ({ where: { id }, data }: { where: { id: string }; data: Partial<Card> }) => {
       const card = cards.get(id);
       if (!card) throw new Error('missing card');
       Object.assign(card, data);
       return structuredClone(card);
+    },
+    delete: async ({ where: { id } }: { where: { id: string } }) => {
+      cards.delete(id);
     },
   },
   creditCardPurchase: {

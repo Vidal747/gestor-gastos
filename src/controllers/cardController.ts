@@ -43,7 +43,8 @@ export type CardStore = {
     }) => Promise<PersistedCard>;
     findUnique: (args: { where: { id: string } }) => Promise<PersistedCard | null>;
     findMany: (args: { where: { userId: string } }) => Promise<PersistedCard[]>;
-    update: (args: { where: { id: string }; data: { annualRate: string } }) => Promise<PersistedCard>;
+    update: (args: { where: { id: string }; data: { annualRate?: string; name?: string; bank?: string; creditLimit?: string; cutoffDay?: number; dueDay?: number } }) => Promise<PersistedCard>;
+    delete: (args: { where: { id: string } }) => Promise<unknown>;
   };
   creditCardPurchase: {
     create: (args: {
@@ -405,6 +406,52 @@ export const payPurchaseInstallment = async (
     throw createNotFoundError('Purchase not found.');
   }
   return toPurchaseView(updated);
+};
+
+export const updateCard = async (
+  cardId: string,
+  input: { name?: string; bank?: string; creditLimit?: string; cutoffDay?: number; dueDay?: number },
+  currentUserId: string,
+  deps: { prisma: CardStore },
+): Promise<CardView> => {
+  const card = await loadOwnedCard(cardId, currentUserId, deps.prisma);
+  const data: Record<string, unknown> = {};
+  if (input.name !== undefined && input.name.trim()) {
+    data.name = input.name.trim();
+  }
+  if (input.bank !== undefined && input.bank.trim()) {
+    data.bank = input.bank.trim();
+  }
+  if (input.creditLimit !== undefined) {
+    data.creditLimit = moneyString(input.creditLimit);
+  }
+  if (input.cutoffDay !== undefined) {
+    data.cutoffDay = input.cutoffDay;
+  }
+  if (input.dueDay !== undefined) {
+    data.dueDay = input.dueDay;
+  }
+  if (Object.keys(data).length === 0) {
+    return toCardView(card);
+  }
+  const updated = await deps.prisma.creditCard.update({ where: { id: cardId }, data });
+  return toCardView(updated);
+};
+
+export const deleteCard = async (
+  cardId: string,
+  currentUserId: string,
+  deps: { prisma: CardStore },
+): Promise<void> => {
+  const card = await loadOwnedCard(cardId, currentUserId, deps.prisma);
+  const view = toCardView(card);
+  const hasOpenPurchases = view.purchases.some(
+    (p) => p.status === 'OPEN' || p.status === 'PARTIALLY_PAID',
+  );
+  if (hasOpenPurchases) {
+    throw createValidationError('No se puede eliminar una tarjeta con compras activas.');
+  }
+  await deps.prisma.creditCard.delete({ where: { id: cardId } });
 };
 
 export const updateCardRate = async (
