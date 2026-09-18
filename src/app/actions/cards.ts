@@ -35,14 +35,24 @@ export const createCardAction = async (formData: FormData) => {
       { prisma: cardStore },
     );
     revalidatePath('/tarjetas');
-    return created;
+    return { id: created.id };
   });
 };
 
 export const previewPurchaseAction = async (formData: FormData) => {
   return toActionResult(async () => {
     const currentUserId = await getCurrentUserId();
-    return previewPurchase(purchaseInputFrom(formData), currentUserId, { prisma: cardStore });
+    const preview = await previewPurchase(purchaseInputFrom(formData), currentUserId, { prisma: cardStore });
+    return {
+      schedule: preview.schedule.map((row) => ({
+        installmentNumber: row.installmentNumber,
+        principal: row.principal.toFixed(2),
+        interest: row.interest.toFixed(2),
+        total: row.total.toFixed(2),
+        remainingBalance: row.remainingBalance.toFixed(2),
+        dueDate: row.dueDate,
+      })),
+    };
   });
 };
 
@@ -52,7 +62,7 @@ export const createPurchaseAction = async (formData: FormData) => {
     const created = await createPurchase(purchaseInputFrom(formData), currentUserId, { prisma: cardStore });
     revalidatePath(`/tarjetas/${created.cardId}`);
     revalidatePath('/proximos');
-    return created;
+    return { id: created.id, cardId: created.cardId };
   });
 };
 
@@ -71,7 +81,7 @@ export const payPurchaseAction = async (formData: FormData) => {
     revalidatePath(`/tarjetas/${paid.cardId}`);
     revalidatePath(`/tarjetas/${paid.cardId}/compras/${paid.id}`);
     revalidatePath('/proximos');
-    return paid;
+    return { id: paid.id, cardId: paid.cardId };
   });
 };
 
@@ -88,6 +98,6 @@ export const updateCardRateAction = async (formData: FormData) => {
     );
     revalidatePath(`/tarjetas/${updated.id}`);
     revalidatePath('/proximos');
-    return updated;
+    return { id: updated.id };
   });
 };

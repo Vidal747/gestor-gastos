@@ -4,6 +4,7 @@ import type { AuthStore } from '@/controllers/authController';
 import type { CardStore, PersistedCard, PersistedPurchase } from '@/controllers/cardController';
 import type { DebtStore, PersistedDebt } from '@/controllers/debtController';
 import type { RelationshipStore } from '@/controllers/relationshipController';
+import type { SavingStore } from '@/controllers/savingController';
 import { prisma } from '@/lib/db';
 
 type Client = PrismaClient | Prisma.TransactionClient;
@@ -93,6 +94,32 @@ export const asCardStore = (client: Client): CardStore => ({
 
 export const debtStore = asDebtStore(prisma);
 export const cardStore = asCardStore(prisma);
+
+const savingInclude = {
+  participants: { include: { user: { select: { id: true, name: true } } } },
+  contributions: {
+    include: { user: { select: { id: true, name: true } } },
+    orderBy: { contributionDate: 'desc' as const },
+  },
+};
+
+export const savingStore: SavingStore = {
+  user: {
+    findUnique: async ({ where }) => prisma.user.findUnique({ where, select: { id: true, name: true } }),
+  },
+  userConnection: {
+    findUnique: async ({ where }) => prisma.userConnection.findUnique({ where, select: { id: true } }),
+  },
+  savingGoal: {
+    create: async ({ data }) => prisma.savingGoal.create({ data, include: savingInclude }),
+    findUnique: async ({ where }) => prisma.savingGoal.findUnique({ where, include: savingInclude }),
+    findMany: async ({ where }) => prisma.savingGoal.findMany({ where, include: savingInclude }),
+    update: async ({ where, data }) => prisma.savingGoal.update({ where, data }),
+  },
+  savingContribution: {
+    create: async ({ data }) => prisma.savingContribution.create({ data }),
+  },
+};
 
 export const relationshipStore: RelationshipStore = {
   user: {

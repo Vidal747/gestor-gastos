@@ -39,5 +39,12 @@ export const payDebtInputSchema = z.object({
   notes: z.string().trim().max(200).optional(),
 });
 
+export const monthlyDebtScheduleSchema = z.object({
+  installmentAmount: moneySchema,
+  dueDay: z.coerce.number().int().min(1).max(31),
+  count: z.coerce.number().int().min(1).max(60),
+});
+
 export type CreateDebtInput = z.input<typeof createDebtInputSchema>;
 export type PayDebtInput = z.input<typeof payDebtInputSchema>;
+export type MonthlyDebtScheduleInput = z.input<typeof monthlyDebtScheduleSchema>;

@@ -3,6 +3,7 @@ import Decimal from 'decimal.js';
 
 import {
   assertManualSchedule,
+  buildMonthlyDebtSchedule,
   calculateInstallments,
   distributeAmount,
   firstInstallmentDueDate,
@@ -194,5 +195,40 @@ describe('finance utilities', () => {
         { amount: 60, dueDate: { year: 2026, month: 2, day: 10 } },
       ]),
     ).not.toThrow();
+  });
+
+  it('builds equal monthly debt installments from amount, due day and duration', () => {
+    const schedule = buildMonthlyDebtSchedule({
+      amount: '200000',
+      dueDay: 30,
+      count: 3,
+      from: { year: 2026, month: 9, day: 16 },
+    });
+    expect(schedule).toEqual([
+      { amount: toMoney('200000'), dueDate: { year: 2026, month: 9, day: 30 } },
+      { amount: toMoney('200000'), dueDate: { year: 2026, month: 10, day: 30 } },
+      { amount: toMoney('200000'), dueDate: { year: 2026, month: 11, day: 30 } },
+    ]);
+  });
+
+  it('clamps due day 30 to the last day of February', () => {
+    const schedule = buildMonthlyDebtSchedule({
+      amount: 100,
+      dueDay: 30,
+      count: 2,
+      from: { year: 2026, month: 2, day: 1 },
+    });
+    expect(schedule[0].dueDate).toEqual({ year: 2026, month: 2, day: 28 });
+    expect(schedule[1].dueDate).toEqual({ year: 2026, month: 3, day: 30 });
+  });
+
+  it('starts next month when the due day already passed', () => {
+    const schedule = buildMonthlyDebtSchedule({
+      amount: 50,
+      dueDay: 5,
+      count: 1,
+      from: { year: 2026, month: 9, day: 16 },
+    });
+    expect(schedule[0].dueDate).toEqual({ year: 2026, month: 10, day: 5 });
   });
 });

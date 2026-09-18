@@ -12,6 +12,7 @@ const links = [
   { href: '/proximos', label: 'Próximos' },
   { href: '/deudas', label: 'Deudas' },
   { href: '/tarjetas', label: 'Tarjetas' },
+  { href: '/ahorros', label: 'Ahorros' },
 ];
 
 export function Nav({ loggedIn }: { loggedIn: boolean }) {

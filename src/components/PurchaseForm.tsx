@@ -8,7 +8,6 @@ import { Input } from '@heroui/react/input';
 import { Label } from '@heroui/react/label';
 import { Table } from '@heroui/react/table';
 import { TextField } from '@heroui/react/textfield';
-import Decimal from 'decimal.js';
 
 import { createPurchaseAction, previewPurchaseAction } from '@/app/actions/cards';
 import { formatCOP, formatDate } from '@/lib/format';
@@ -17,9 +16,9 @@ import type { CalendarDate } from '@/lib/finance';
 
 type PreviewRow = {
   installmentNumber: number;
-  principal: Decimal;
-  interest: Decimal;
-  total: Decimal;
+  principal: string;
+  interest: string;
+  total: string;
   dueDate: CalendarDate;
 };
 

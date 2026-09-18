@@ -224,6 +224,43 @@ export const recalcOpenFrenchInstallments = (input: {
   };
 };
 
+const daysInMonth = (year: number, month: number): number => new Date(Date.UTC(year, month, 0)).getUTCDate();
+
+export const calendarDateOnDay = (year: number, month: number, day: number): CalendarDate => ({
+  year,
+  month,
+  day: Math.min(Math.max(1, day), daysInMonth(year, month)),
+});
+
+export const nextDueOnOrAfter = (from: CalendarDate, dueDay: number): CalendarDate => {
+  const candidate = calendarDateOnDay(from.year, from.month, dueDay);
+  if (candidate.day >= from.day) {
+    return candidate;
+  }
+  if (from.month === 12) {
+    return calendarDateOnDay(from.year + 1, 1, dueDay);
+  }
+  return calendarDateOnDay(from.year, from.month + 1, dueDay);
+};
+
+export const buildMonthlyDebtSchedule = (input: {
+  amount: Decimal | number | string;
+  dueDay: number;
+  count: number;
+  from: CalendarDate;
+}): Array<{ amount: Decimal; dueDate: CalendarDate }> => {
+  const count = Math.max(1, Math.trunc(input.count));
+  const money = toMoney(input.amount);
+  const first = nextDueOnOrAfter(input.from, input.dueDay);
+  const firstIndex = first.year * 12 + (first.month - 1);
+  return Array.from({ length: count }, (_, offset) => {
+    const index = firstIndex + offset;
+    const year = Math.floor(index / 12);
+    const month = (index % 12) + 1;
+    return { amount: money, dueDate: calendarDateOnDay(year, month, input.dueDay) };
+  });
+};
+
 export const assertManualSchedule = (
   total: Decimal | number | string,
   rows: Array<{ amount: Decimal | number | string; dueDate: CalendarDate }>,
