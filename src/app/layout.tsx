@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const userId = await getOptionalUserId();
   return (
-    <html className="light" data-theme="light" lang="es">
+    <html data-theme="dark" lang="es">
       <body className={`${outfit.variable} ${fraunces.variable} min-h-screen bg-background font-sans text-foreground antialiased`}>
         <Providers>
           <Nav loggedIn={Boolean(userId)} />

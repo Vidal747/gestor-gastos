@@ -15,17 +15,17 @@
     "prisma:validate": "prisma validate"
   },
   "dependencies": {
-    "@heroui/react": "^3.2.5",
-    "@heroui/styles": "^3.2.5",
+    "@heroui/react": "3.2.5",
+    "@heroui/styles": "3.2.5",
     "@prisma/client": "6.15.0",
-    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/postcss": "4.3.3",
     "decimal.js": "10.4.3",
     "next": "15.3.8",
-    "postcss": "^8.5.28",
+    "postcss": "8.5.28",
     "prisma": "6.15.0",
     "react": "19.0.0",
-    "react-aria": "^3.52.1",
-    "react-aria-components": "^1.21.1",
+    "react-aria": "3.52.1",
+    "react-aria-components": "1.21.1",
     "react-dom": "19.0.0",
     "zod": "3.23.8"
   },
@@ -34,8 +34,8 @@
     "@types/react": "19.0.2",
     "@types/react-dom": "19.0.2",
     "eslint": "9.17.0",
-    "eslint-config-next": "^15.3.8",
-    "tailwindcss": "^4.3.3",
+    "eslint-config-next": "15.3.8",
+    "tailwindcss": "4.3.3",
     "typescript": "5.6.3",
     "vitest": "2.1.8"
   }
