@@ -16,7 +16,7 @@ export default async function RelationshipsPage() {
   const people = await listRelationships(user.id, { prisma: relationshipStore });
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-10 pb-16">
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 pb-20 sm:py-10 lg:pb-16">
       <section className="mb-8 grid max-w-2xl gap-3">
         <Typography className="uppercase tracking-[0.16em]" color="muted" type="body-xs">
           Relaciones
@@ -32,7 +32,7 @@ export default async function RelationshipsPage() {
           <Typography className="uppercase tracking-[0.16em]" color="muted" type="body-xs">
             Tu código
           </Typography>
-          <p className="mt-2 font-serif text-4xl tracking-[0.12em]">{formatInviteCode(user.inviteCode)}</p>
+            <p className="mt-2 break-all font-serif text-3xl tracking-[0.12em] sm:text-4xl">{formatInviteCode(user.inviteCode)}</p>
           <Typography className="mt-2" color="muted" type="body-sm">
             Este es el único dato que la otra persona necesita.
           </Typography>
@@ -57,35 +57,35 @@ export default async function RelationshipsPage() {
           </li>
         ) : null}
         {people.map((person) => (
-          <li key={person.peer.id}>
-            <Surface className="rounded-3xl p-6">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <Typography type="h4">{person.peer.name}</Typography>
-                  <Typography color="muted" type="body-sm">
-                    {person.peer.inviteCodeLabel}
-                  </Typography>
+            <li key={person.peer.id} className="min-w-0">
+              <Surface className="rounded-3xl p-5 transition-shadow duration-300 hover:shadow-lg sm:p-6">
+                <div className="flex min-w-0 items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <Typography className="truncate" type="h4">{person.peer.name}</Typography>
+                    <Typography className="truncate" color="muted" type="body-sm">
+                      {person.peer.inviteCodeLabel}
+                    </Typography>
+                  </div>
+                  <Chip className="shrink-0" color={directionChipColor(person.direction)} variant="soft">
+                    {relationshipCopy(person.direction, person.net)}
+                  </Chip>
                 </div>
-                <Chip color={directionChipColor(person.direction)} variant="soft">
-                  {relationshipCopy(person.direction, person.net)}
-                </Chip>
-              </div>
-              <div className="mt-4 flex items-center justify-between gap-4">
-                <ButtonLink href={`/deudas/nueva?peer=${person.peer.id}`} variant="secondary">
-                  Registrar una deuda
-                </ButtonLink>
-                <span
-                  className={
-                    person.direction === 'i_owe'
-                      ? 'font-serif text-2xl text-danger'
-                      : person.direction === 'they_owe'
-                        ? 'font-serif text-2xl text-success'
-                        : 'font-serif text-2xl text-muted'
-                  }
-                >
-                  {person.direction === 'even' ? '—' : relationshipCopy(person.direction, person.net)}
-                </span>
-              </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <ButtonLink href={`/deudas/nueva?peer=${person.peer.id}`} variant="secondary">
+                    Registrar una deuda
+                  </ButtonLink>
+                  <span
+                    className={
+                      person.direction === 'i_owe'
+                        ? 'shrink-0 font-serif text-xl text-danger tabular-nums sm:text-2xl'
+                        : person.direction === 'they_owe'
+                          ? 'shrink-0 font-serif text-xl text-success tabular-nums sm:text-2xl'
+                          : 'shrink-0 font-serif text-xl text-muted tabular-nums sm:text-2xl'
+                    }
+                  >
+                    {person.direction === 'even' ? '—' : relationshipCopy(person.direction, person.net)}
+                  </span>
+                </div>
             </Surface>
           </li>
         ))}

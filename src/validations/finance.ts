@@ -1,8 +1,13 @@
 import { z } from 'zod';
 
-export const moneySchema = z.union([z.number(), z.string()]).refine((value) => Number(value) > 0, {
-  message: 'The amount must be greater than zero.',
-});
+import { normalizeMoneyString } from '@/lib/finance';
+
+export const moneySchema = z
+  .union([z.number(), z.string()])
+  .transform((value) => (typeof value === 'string' ? normalizeMoneyString(value) : value))
+  .refine((value) => Number(value) > 0, {
+    message: 'El valor debe ser mayor que cero.',
+  });
 
 export const percentageSchema = z.union([z.number(), z.string()]).refine((value) => Number(value) >= 0 && Number(value) <= 100, {
   message: 'The percentage must be between 0 and 100.',

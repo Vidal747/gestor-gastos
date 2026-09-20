@@ -20,6 +20,7 @@
     "@prisma/client": "6.15.0",
     "@tailwindcss/postcss": "4.3.3",
     "decimal.js": "10.4.3",
+    "lucide-react": "^1.47.0",
     "next": "15.3.8",
     "postcss": "8.5.28",
     "prisma": "6.15.0",
@@ -27,6 +28,7 @@
     "react-aria": "3.52.1",
     "react-aria-components": "1.21.1",
     "react-dom": "19.0.0",
+    "recharts": "^3.10.1",
     "zod": "3.23.8"
   },
   "devDependencies": {

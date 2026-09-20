@@ -9,6 +9,20 @@ import { listSavingGoals, type SavingStore } from '@/controllers/savingControlle
 import { listUpcoming, type UpcomingItem } from '@/controllers/upcomingController';
 import { toMoney } from '@/lib/finance';
 
+export type CardBreakdown = { id: string; name: string; used: number; available: number };
+export type SavingBreakdown = { id: string; name: string; saved: number; remaining: number };
+export type CategoryBreakdown = { category: string; label: string; amount: number };
+export type DayBreakdown = { day: string; fullDay: string; amount: number };
+
+const INCOME_CATEGORY_LABELS: Record<string, string> = {
+  SALARY: 'Salario',
+  FREELANCE: 'Freelance',
+  REFUND: 'Reembolso',
+  SALE: 'Venta',
+  EXTRA: 'Extra',
+  OTHER: 'Otro',
+};
+
 export type DashboardView = {
   netPosition: Decimal;
   iOweTotal: Decimal;
@@ -26,6 +40,10 @@ export type DashboardView = {
   currentMonthIncome: Decimal;
   upcoming: UpcomingItem[];
   overdue: UpcomingItem[];
+  cardBreakdown: CardBreakdown[];
+  savingsBreakdown: SavingBreakdown[];
+  incomeByCategory: CategoryBreakdown[];
+  upcomingByDay: DayBreakdown[];
 };
 
 export type DashboardDeps = {
@@ -90,6 +108,60 @@ export const getDashboard = async (
 
   const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
+  const cardBreakdown: CardBreakdown[] = cards.map((card) => {
+    const used = toMoney(card.creditLimit).minus(toMoney(card.availableCredit));
+    return {
+      id: card.id,
+      name: card.name,
+      used: Math.max(0, used.toNumber()),
+      available: Math.max(0, toMoney(card.availableCredit).toNumber()),
+    };
+  });
+
+  const savingsBreakdown: SavingBreakdown[] = savings.map((saving) => ({
+    id: saving.id,
+    name: saving.name,
+    saved: toMoney(saving.savedAmount).toNumber(),
+    remaining: Math.max(0, toMoney(saving.remainingAmount).toNumber()),
+  }));
+
+  const incomeByMonth = incomes.filter(
+    (i) => i.date.getUTCFullYear() === now.getUTCFullYear() && i.date.getUTCMonth() === now.getUTCMonth(),
+  );
+  const incomeByCategoryMap = new Map<string, Decimal>();
+  for (const income of incomeByMonth) {
+    incomeByCategoryMap.set(
+      income.category,
+      (incomeByCategoryMap.get(income.category) ?? new Decimal(0)).plus(income.amount),
+    );
+  }
+  const incomeByCategory: CategoryBreakdown[] = [...incomeByCategoryMap.entries()].map(
+    ([category, amount]) => ({
+      category,
+      label: INCOME_CATEGORY_LABELS[category] ?? category,
+      amount: toMoney(amount).toNumber(),
+    }),
+  );
+
+  const dayFormatter = new Intl.DateTimeFormat('es-CO', { weekday: 'short', timeZone: 'America/Bogota' });
+  const upcomingByDayMap = new Map<string, { fullDay: string; amount: Decimal }>();
+  for (let offset = 0; offset < 7; offset += 1) {
+    const day = new Date(now.getTime() + offset * 24 * 60 * 60 * 1000);
+    const key = `${day.getUTCDate()}/${day.getUTCMonth() + 1}`;
+    upcomingByDayMap.set(key, { fullDay: dayFormatter.format(day), amount: new Decimal(0) });
+  }
+  for (const item of upcoming) {
+    if (item.dueDate < now || item.dueDate > nextWeek) continue;
+    const key = `${item.dueDate.getUTCDate()}/${item.dueDate.getUTCMonth() + 1}`;
+    const existing = upcomingByDayMap.get(key) ?? { fullDay: dayFormatter.format(item.dueDate), amount: new Decimal(0) };
+    upcomingByDayMap.set(key, { fullDay: existing.fullDay, amount: existing.amount.plus(item.outstanding) });
+  }
+  const upcomingByDay: DayBreakdown[] = [...upcomingByDayMap.entries()].map(([day, value]) => ({
+    day,
+    fullDay: value.fullDay,
+    amount: value.amount.toNumber(),
+  }));
+
   const overdue = upcoming
     .filter((item) => item.dueDate < now)
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
@@ -115,5 +187,9 @@ export const getDashboard = async (
     currentMonthIncome: toMoney(currentMonthIncome),
     upcoming: upcomingFiltered.slice(0, 6),
     overdue: overdue.slice(0, 6),
+    cardBreakdown,
+    savingsBreakdown,
+    incomeByCategory,
+    upcomingByDay,
   };
 };

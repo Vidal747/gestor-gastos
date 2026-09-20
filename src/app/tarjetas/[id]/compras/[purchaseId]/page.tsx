@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation';
+import { CalendarClock, ListChecks, Percent, Wallet } from 'lucide-react';
 import { Surface } from '@heroui/react/surface';
-import { Table } from '@heroui/react/table';
 import { Typography } from '@heroui/react/typography';
+import Decimal from 'decimal.js';
+import Link from 'next/link';
 
-import { PayForm } from '@/components/PayForm';
+import { InstallmentList, InstallmentSummary, type InstallmentRowData } from '@/components/InstallmentList';
 import { getCard } from '@/controllers/cardController';
 import { AppError } from '@/lib/errors';
 import { formatCOP, formatDate, statusLabel } from '@/lib/format';
@@ -24,53 +26,83 @@ export default async function PurchaseDetailPage({
       notFound();
     }
     const current = purchase.installments.find((item) => item.outstanding.gt(0));
+    const outstandingTotal = purchase.installments.reduce(
+      (sum, item) => sum.plus(item.outstanding),
+      new Decimal(0),
+    );
+    const paidTotal = purchase.totalAmount.minus(outstandingTotal);
+    const interestTotal = purchase.installments.reduce((sum, item) => sum.plus(item.interest), new Decimal(0));
+    const paidCount = purchase.installments.filter((item) => item.outstanding.lte(0)).length;
+    const now = Date.now();
+    const rows: InstallmentRowData[] = purchase.installments.map((item) => ({
+      id: item.id,
+      n: item.installmentNumber,
+      dueLabel: formatDate(item.dueDate),
+      overdue: item.dueDate.getTime() < now && item.outstanding.gt(0),
+      amount: item.total.toNumber(),
+      outstanding: item.outstanding.toNumber(),
+      status: item.status,
+      principal: item.principal.toNumber(),
+      interest: item.interest.toNumber(),
+    }));
+
     return (
-      <main className="mx-auto w-full max-w-6xl px-4 py-10 pb-16">
-        <section className="mb-8 grid gap-2">
+      <main className="mx-auto w-full max-w-6xl px-4 py-8 pb-20 sm:py-10 lg:pb-16">
+        <section className="mb-6 grid gap-2">
           <Typography className="uppercase tracking-[0.16em]" color="muted" type="body-xs">
-            {card.name}
+            <Link className="hover:text-foreground" href={`/tarjetas/${card.id}`}>
+              {card.name}
+            </Link>
           </Typography>
-          <Typography type="h1">{purchase.description}</Typography>
+          <Typography className="break-words" type="h1">
+            {purchase.description}
+          </Typography>
           <Typography color="muted">
             {formatCOP(purchase.totalAmount)} · {statusLabel(purchase.status)}
           </Typography>
         </section>
-        <Surface className="rounded-3xl p-4 sm:p-6">
-          <Table>
-            <Table.ScrollContainer>
-              <Table.Content aria-label="Cuotas de la compra">
-                <Table.Header>
-                  <Table.Column isRowHeader>#</Table.Column>
-                  <Table.Column>Vence</Table.Column>
-                  <Table.Column>Capital</Table.Column>
-                  <Table.Column>Interés</Table.Column>
-                  <Table.Column>Total</Table.Column>
-                  <Table.Column>Pendiente</Table.Column>
-                </Table.Header>
-                <Table.Body>
-                  {purchase.installments.map((item) => (
-                    <Table.Row key={item.id} id={item.id}>
-                      <Table.Cell>{item.installmentNumber}</Table.Cell>
-                      <Table.Cell>{formatDate(item.dueDate)}</Table.Cell>
-                      <Table.Cell>{formatCOP(item.principal)}</Table.Cell>
-                      <Table.Cell>{formatCOP(item.interest)}</Table.Cell>
-                      <Table.Cell>{formatCOP(item.total)}</Table.Cell>
-                      <Table.Cell>{formatCOP(item.outstanding)}</Table.Cell>
-                    </Table.Row>
-                  ))}
-                </Table.Body>
-              </Table.Content>
-            </Table.ScrollContainer>
-          </Table>
+
+        <Surface className="rounded-3xl p-5 transition-shadow duration-300 hover:shadow-lg sm:p-6">
+          <InstallmentSummary
+            paid={paidTotal.toNumber()}
+            total={purchase.totalAmount.toNumber()}
+            stats={[
+              {
+                icon: <Wallet className="h-4 w-4" aria-hidden />,
+                label: 'Pendiente',
+                value: formatCOP(outstandingTotal),
+                tone: outstandingTotal.gt(0) ? 'danger' : 'success',
+              },
+              {
+                icon: <Percent className="h-4 w-4" aria-hidden />,
+                label: 'Intereses totales',
+                value: formatCOP(interestTotal),
+              },
+              {
+                icon: <CalendarClock className="h-4 w-4" aria-hidden />,
+                label: 'Próximo vencimiento',
+                value: current ? formatDate(current.dueDate) : '—',
+              },
+              {
+                icon: <ListChecks className="h-4 w-4" aria-hidden />,
+                label: 'Cuotas pagadas',
+                value: `${paidCount}/${purchase.installments.length}`,
+              },
+            ]}
+          />
         </Surface>
-        {current ? (
-          <Surface className="mt-4 max-w-md rounded-3xl p-6">
-            <Typography type="h4">Pagar la cuota {current.installmentNumber}</Typography>
-            <div className="mt-4">
-              <PayForm kind="purchase" id={purchase.id} maxAmount={formatCOP(current.outstanding)} />
-            </div>
-          </Surface>
-        ) : null}
+
+        <Surface className="mt-4 rounded-3xl p-5 sm:p-6">
+          <div className="mb-4 flex min-w-0 items-center justify-between gap-3">
+            <Typography className="truncate" type="h4">
+              Cuotas
+            </Typography>
+            <Typography className="shrink-0 text-sm tabular-nums" color="muted">
+              {purchase.installments.length} en total
+            </Typography>
+          </div>
+          <InstallmentList items={rows} variant="purchase" payId={current ? purchase.id : null} />
+        </Surface>
       </main>
     );
   } catch (error) {

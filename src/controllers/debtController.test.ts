@@ -197,4 +197,24 @@ describe('debtController', () => {
     expect(paid.status).toBe('PAID');
     expect(paid.installments[1].status).toBe('PAID');
   });
+
+  it('pays an installment typed in Colombian format with thousand separators', async () => {
+    const created = await createDebt(
+      {
+        description: 'Préstamo',
+        ownerRole: 'DEBTOR',
+        counterpartyName: 'Banco',
+        originalAmount: '850.000',
+        installments: [{ amount: '850.000', dueDate: { year: 2026, month: 1, day: 10 } }],
+      },
+      'user-a',
+      { prisma: fakePrisma },
+    );
+    expect(created.originalAmount.toNumber()).toBe(850000);
+    const paid = await payDebtInstallment({ debtId: created.id, amount: '850.000' }, 'user-a', {
+      prisma: fakePrisma,
+    });
+    expect(paid.remainingAmount.toNumber()).toBe(0);
+    expect(paid.status).toBe('PAID');
+  });
 });

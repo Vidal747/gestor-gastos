@@ -2,7 +2,7 @@ import { Surface } from '@heroui/react/surface';
 
 export default function DashboardLoading() {
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-10 pb-16">
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 pb-20 sm:py-10 lg:pb-16">
       <div className="mb-6 h-8 w-48 animate-pulse rounded-lg bg-surface-tertiary" />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4, 5, 6].map((i) => (

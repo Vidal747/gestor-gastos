@@ -12,7 +12,7 @@ export default async function UpcomingPage() {
   const items = await listUpcoming(userId, { debts: debtStore, cards: cardStore });
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-10 pb-16">
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 pb-20 sm:py-10 lg:pb-16">
       <section className="mb-8 grid gap-2">
         <Typography className="uppercase tracking-[0.16em]" color="muted" type="body-xs">
           Calendario
@@ -28,16 +28,16 @@ export default async function UpcomingPage() {
           </li>
         ) : null}
         {items.map((item) => (
-          <li key={item.id}>
-            <Link href={item.href}>
-              <Surface className="flex items-center justify-between gap-4 rounded-3xl p-5">
-                <div>
-                  <Typography type="h4">{item.title}</Typography>
-                  <Typography color="muted" type="body-sm">
-                    {formatDate(item.dueDate)}
-                  </Typography>
-                </div>
-                <span className="font-serif text-2xl tracking-tight">{formatCOP(item.outstanding)}</span>
+            <li key={item.id} className="min-w-0">
+              <Link href={item.href} className="block">
+                <Surface className="flex items-center justify-between gap-3 rounded-3xl p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg sm:gap-4 sm:p-5">
+                  <div className="min-w-0">
+                    <Typography className="truncate" type="h4">{item.title}</Typography>
+                    <Typography color="muted" type="body-sm">
+                      {formatDate(item.dueDate)}
+                    </Typography>
+                  </div>
+                  <span className="shrink-0 font-serif text-xl tracking-tight tabular-nums sm:text-2xl">{formatCOP(item.outstanding)}</span>
               </Surface>
             </Link>
           </li>

@@ -10,6 +10,7 @@ import {
   installmentOutstanding,
   monthlyRateFromAnnualRate,
   netBalanceBetween,
+  normalizeMoneyString,
   outstandingDebt,
   recalcOpenFrenchInstallments,
   toMoney,
@@ -53,7 +54,12 @@ describe('finance utilities', () => {
   });
 
   it('rounds money to the defined currency precision', () => {
-    expect(toMoney('99.995').toNumber()).toBe(100);
+    expect(toMoney('99.9951').toNumber()).toBe(100);
+  });
+
+  it('treats a single dot followed by 3 digits as Colombian thousands', () => {
+    // Ambiguo por naturaleza: en esta app (pesos, sin milésimas) "99.995" son 99.995 pesos.
+    expect(toMoney('99.995').toNumber()).toBe(99995);
   });
 
   it('charges more interest in early french installments than in later ones', () => {
@@ -230,5 +236,26 @@ describe('finance utilities', () => {
       from: { year: 2026, month: 9, day: 16 },
     });
     expect(schedule[0].dueDate).toEqual({ year: 2026, month: 10, day: 5 });
+  });
+
+  it('normalizes Colombian thousand separators to machine format', () => {
+    expect(normalizeMoneyString('524.390')).toBe('524390');
+    expect(normalizeMoneyString('1.234.567')).toBe('1234567');
+    expect(normalizeMoneyString('1.234.567,89')).toBe('1234567.89');
+    expect(normalizeMoneyString('1,234,567.89')).toBe('1234567.89');
+    expect(normalizeMoneyString('250,50')).toBe('250.50');
+  });
+
+  it('leaves plain decimals untouched', () => {
+    expect(normalizeMoneyString('200.50')).toBe('200.50');
+    expect(normalizeMoneyString('848426.83')).toBe('848426.83');
+    expect(normalizeMoneyString('99.99')).toBe('99.99');
+    expect(normalizeMoneyString('250000')).toBe('250000');
+  });
+
+  it('parses Colombian formatted strings to the intended money value', () => {
+    expect(toMoney('524.390').toNumber()).toBe(524390);
+    expect(toMoney('1.234.567,89').toNumber()).toBe(1234567.89);
+    expect(toMoney('848426.83').toNumber()).toBe(848426.83);
   });
 });

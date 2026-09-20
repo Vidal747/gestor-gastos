@@ -6,7 +6,7 @@ import { AuthForm } from '@/components/AuthForm';
 
 export default function RegisterPage() {
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-10 pb-16">
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 pb-20 sm:py-10 lg:pb-16">
       <section className="mb-8 grid max-w-2xl gap-2">
         <Typography className="uppercase tracking-[0.16em]" color="muted" type="body-xs">
           Cuenta nueva

@@ -20,7 +20,7 @@ export default async function IncomesPage() {
   const monthTotal = thisMonth.reduce((sum, i) => sum.plus(i.amount), toMoney(0));
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-10 pb-16">
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 pb-20 sm:py-10 lg:pb-16">
       <section className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div className="grid gap-2">
           <Typography className="uppercase tracking-[0.16em]" color="muted" type="body-xs">

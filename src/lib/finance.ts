@@ -5,8 +5,50 @@ export const MONEY_MULTIPLIER = new Decimal(10).pow(MONEY_PRECISION);
 
 export type Money = Decimal;
 
+/**
+ * Normaliza un monto escrito a mano al formato máquina ("1234567.89").
+ * Acepta formato colombiano (puntos de miles, coma decimal) e internacional:
+ * - "524.390" → "524390" | "1.234.567" → "1234567"
+ * - "1.234.567,89" → "1234567.89" | "1,234,567.89" → "1234567.89"
+ * - "250,50" → "250.50" | "200.50" → "200.50" (sin cambios)
+ * Regla con un solo punto: si lo que sigue tiene exactamente 3 dígitos
+ * (y hay cifra distinta de cero antes), son miles; si no, es decimal.
+ */
+export const normalizeMoneyString = (raw: string): string => {
+  const value = raw.trim().replace(/\s+/g, '');
+  if (!value) return value;
+  const hasDot = value.includes('.');
+  const hasComma = value.includes(',');
+  if (hasDot && hasComma) {
+    if (value.lastIndexOf('.') > value.lastIndexOf(',')) {
+      return value.replace(/,/g, '');
+    }
+    return value.replace(/\./g, '').replace(',', '.');
+  }
+  if (hasComma) {
+    return value.replace(',', '.');
+  }
+  const parts = value.split('.');
+  if (parts.length > 2) {
+    return parts.join('');
+  }
+  if (
+    parts.length === 2 &&
+    /^\d+$/.test(parts[0]) &&
+    parts[0] !== '' &&
+    parts[0] !== '0' &&
+    /^\d{3}$/.test(parts[1])
+  ) {
+    return parts[0] + parts[1];
+  }
+  return value;
+};
+
 const asDecimal = (value: number | string | Decimal): Decimal => {
-  return typeof value === 'string' || typeof value === 'number' ? new Decimal(value) : value;
+  if (typeof value === 'string') {
+    return new Decimal(normalizeMoneyString(value));
+  }
+  return typeof value === 'number' ? new Decimal(value) : value;
 };
 
 export const toMoney = (value: number | string | Decimal): Decimal => {
